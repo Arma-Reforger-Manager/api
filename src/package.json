@@ -1,0 +1,25 @@
+{
+	"name": "@arma-reforger-manager/api",
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"start": "node dist/index.js",
+		"build": "esbuild './api/**/*.ts' --bundle --packages=external --platform=node --target=node18 --outdir=dist --outbase=api --minify --sourcemap --format=esm --resolve-extensions=.ts,.js",
+		"dev": "vite-node -w api/index.ts",
+		"test": "vitest"
+	},
+	"license": "MIT",
+	"description": "",
+	"devDependencies": {
+	  "globals": "^15.11.0",
+	  "vite-node": "^2.1.2",
+	  "vitest": "^3.0.2"
+	},
+	"dependencies": {
+		"@types/node": "^22.7.5",
+		"dotenv": "^16.4.5",
+		"esbuild": "^0.23.1",
+		"mysql2": "^3.11.3",
+		"redis": "^4.7.0"
+	}
+}
