@@ -1,9 +1,0 @@
-services:
-  api:
-    container_name: app_api
-    build:
-      context: ./src
-      dockerfile: Dockerfile
-    entrypoint: node /work/dist/index.js
-    ports:
-      - 81:81
