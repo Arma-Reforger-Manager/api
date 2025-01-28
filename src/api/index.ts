@@ -1,4 +1,4 @@
-
+console.log(321) 
 /*
     JWT
 */
@@ -10,7 +10,7 @@ import { createServer, IncomingMessage } from "node:http"
 let server = createServer().listen(80)
 
 const headers = {
-    'Access-Control-Allow-Origin': 'http://localhost:4200',
+    'Access-Control-Allow-Origin': 'http://localhost',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': 2592000, // 30 days
 };

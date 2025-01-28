@@ -1,0 +1,12 @@
+services:
+  api:
+    container_name: app_api
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    entrypoint: vite-node -w /work/api/index.ts
+    ports:
+      - 81:80
+    volumes:
+      - ./src:/work
+      - ./node_modules:/work/node_modules
