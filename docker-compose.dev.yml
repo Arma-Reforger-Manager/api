@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     entrypoint: vite-node -w /work/api/index.ts
     ports:
-      - 81:80
+      - 81:81
     volumes:
       - ./src:/work
       - ./node_modules:/work/node_modules

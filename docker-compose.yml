@@ -6,4 +6,4 @@ services:
       dockerfile: Dockerfile
     entrypoint: node /work/dist/index.js
     ports:
-      - 81:80
+      - 81:81
