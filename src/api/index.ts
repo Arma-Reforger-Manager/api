@@ -1,3 +1,22 @@
+/*
+    Databases
+*/
+let RedisDB: typeof import('./RedisDB.js');
+try {
+    console.log('Importing RedisDB')
+    RedisDB = await import('./RedisDB.js')
+} catch (error: any) {
+    console.debug({error})
+    throw new Error("Failed to import RedisDB")
+}
+let MariaDB: typeof import('./MariaDB.js');
+try {
+    console.log('Importing MariaDB')
+    MariaDB =  await import('./MariaDB.js')
+} catch (error: any) {
+    console.debug({error})
+    throw new Error("Failed to import MariaDB")
+}
 
 /*
     JWT
@@ -17,12 +36,12 @@ const RSA_PRIVATE_KEY = fs.readFileSync('certs/rsa.private');
 const RSA_PUBLIC_KEY = fs.readFileSync('certs/rsa.public');
 
 
-
 /*
     HTTP Server
 */
 import { createServer, IncomingMessage } from "node:http"
 import { randomBytes } from 'node:crypto';
+import { isObject } from 'node:util';
 let server = createServer().listen(81)
 
 const headers = {
@@ -51,23 +70,36 @@ server.on("request", async (req, res) => {
         res.writeHead(200, { ...headers });
         res.end();
     } else {
-        const body = await ReadBody(req)
+        // const body = await ReadBody(req)
         // console.debug(body)
         res.writeHead(200, { 'Content-Type': 'application/json', ...headers });
 
         switch (req.url) {
-            case '/log-in': {
-                let token;
+            case '/log-in': { // WIP - Not priority
                 try {
-                    token = jwt.sign({ databaseIdentifier: randomBytes(12) }, RSA_PRIVATE_KEY, { algorithm: 'PS256', expiresIn: '24h' });
-                    // const verify = jwt.verify(token, RSA_PUBLIC_KEY, { ignoreExpiration: false, maxAge: '2d' });
-                    // console.log(verify)
+                    if (req.method) {
+                        if (req.method === 'POST') {
+                            // Create login jwt
+                            const dbId = randomBytes(12).toString('hex');
+                            const token = jwt.sign({ databaseIdentifier:  dbId}, RSA_PRIVATE_KEY, { algorithm: 'PS256', expiresIn: '24h' });
+                            await RedisDB.client.setEx(dbId, 86400, JSON.stringify({test: true}, null,  4)); //1 day
+                            return res.end(JSON.stringify({ success: true, jwt: token }));
+                        } else if (req.method === 'GET') {
+                            // Verify login jwt
+                            if (typeof req.headers.authorization !== 'string') return res.end(JSON.stringify({ success: false }));
+
+                            const verify = jwt.verify(req.headers.authorization, RSA_PUBLIC_KEY, { ignoreExpiration: false, maxAge: '2d' });
+                            console.log(verify)
+                        } else {
+
+                        }
+                    }
+                    
                 } catch (err: any) {
                     console.error({ err })
                     return res.end(JSON.stringify({ success: false }));
                 }
 
-                return res.end(JSON.stringify({ success: true, jwt: token }));
                 break;
             }
 
