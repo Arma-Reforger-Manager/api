@@ -42,10 +42,11 @@ const RSA_PUBLIC_KEY = fs.readFileSync('certs/rsa.public');
 import { createServer, IncomingMessage } from "node:http"
 import { randomBytes } from 'node:crypto';
 import { isObject } from 'node:util';
+import { GLOBAL_VARS } from './environment.js';
 let server = createServer().listen(81)
 
 const headers = {
-    'Access-Control-Allow-Origin': 'http://localhost',
+    'Access-Control-Allow-Origin': GLOBAL_VARS().NODE_ENV === 'PRODUCTION' ? 'https://manager.flabby.dev' : 'http://localhost',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': 2592000, // 30 days
 };
