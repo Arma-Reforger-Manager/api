@@ -1,9 +1,14 @@
 import { createClient, RedisClientType } from 'redis';
 
 // TESTING
-const client = await createClient()
-	.on('error', err => console.log('Redis Client Error', err))
-	.connect();
+import redis from 'redis';
+const client = redis.createClient({
+	url: `redis://default:password@127.0.0.1:3309`
+})
+await client.connect();
+// const client = await createClient('3309')
+// 	.on('error', err => console.log('Redis Client Error', err))
+// 	.connect();
 await client.setEx('test', 60, 'success');
 console.debug({ testing: await client.get('test') })
 await client.disconnect();
@@ -16,7 +21,9 @@ export class RedisDB_Query {
 	}
 
 	private async StartConnection() {
-		this.#connection = await createClient()
+		this.#connection = await createClient({
+			url: `redis://default:password@127.0.0.1:3309`
+		})
 			.on('error', err => console.log('Redis Client Error', err))
 			.connect();
 

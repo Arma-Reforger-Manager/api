@@ -2,7 +2,7 @@ import { GLOBAL_VARS } from './environment.js';
 import { Collection, Db, InsertOneResult, MongoClient } from 'mongodb';
 
 // TESTING
-const url = `mongodb://${GLOBAL_VARS().MongoDB_Username}:${GLOBAL_VARS().MongoDB_Password}@${GLOBAL_VARS().MongoDB_Host}:27017`;
+const url = `mongodb://${GLOBAL_VARS().MongoDB_Username}:${GLOBAL_VARS().MongoDB_Password}@${GLOBAL_VARS().MongoDB_Host}:3305`;
 const client = new MongoClient(url);
 
 async function main() {
@@ -59,12 +59,19 @@ export class MongoDB_Query {
             const Host = GLOBAL_VARS()['MongoDB_Host'];
             const Password = GLOBAL_VARS()['MongoDB_Password'];
             const Username = GLOBAL_VARS()['MongoDB_Username'];
-            this.Client = new MongoClient(`mongodb://${Username}:${Password}@${Host}:27017`);
+            this.Client = new MongoClient(`mongodb://${Username}:${Password}@${Host}:3305`);
             this.MongoDB = this.Client.db(this.Database);
             this.RequestCollection = this.MongoDB.collection('request');
             this.ResponseCollection = this.MongoDB.collection('response');
             resolve(true)
         });
+    }
+
+    public async GetQuery() {
+        if (this.Client === null) await this.DatabaseConnecter();
+        if (this.MongoDB === null) await this.DatabaseConnecter();
+
+        return this.ResponseCollection!;
     }
 
     // Returns doucment's identifier

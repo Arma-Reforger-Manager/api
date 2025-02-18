@@ -15,7 +15,7 @@ export const GLOBAL_VARS = () => {
             MariaDB_Password: "password",
             MariaDB_Database: "reforger_manager_processed",
 
-            MongoDB_Host: 'localhost',
+            MongoDB_Host: '127.0.0.1',
             MongoDB_Username: 'mongodb_root_raw',
             MongoDB_Password: 'password',
 

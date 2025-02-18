@@ -53,11 +53,12 @@ import { createServer, IncomingMessage, Server, ServerResponse } from "node:http
 import { createHash, randomBytes } from 'node:crypto';
 import { GLOBAL_VARS } from './environment.js';
 import { MDB_Document_HTTP } from './MongoDB.Interfaces.js';
+import { QueryResult, FieldPacket } from 'mysql2';
 
 let server: Server<any> = createServer().listen(81);
 
 const headers = {
-    'Access-Control-Allow-Origin': GLOBAL_VARS().IS_DEVELOPMENT ? 'https://manager.flabby.dev' : 'http://localhost:4200',
+    'Access-Control-Allow-Origin': GLOBAL_VARS().IS_DEVELOPMENT ? 'https://manager.flabby.dev' : 'http://localhost',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': 2592000, // 30 days
 };
@@ -97,7 +98,7 @@ function EndHttp(response_variable: ServerResponse<any>, response_statusCode: nu
             }
         };
         const MongoHash = createHash('sha512').update(JSON.stringify(MongoData)).digest('base64');
-        console.log( await Mongo.InsertHttpDocument('response', { ...MongoData, hash: MongoHash }))
+        await Mongo.InsertHttpDocument('response', { ...MongoData, hash: MongoHash })
         response_variable.writeHead(response_statusCode, response_headers).end(response_body);
         return resolve(true);
     });
@@ -107,7 +108,7 @@ async function CacheString(kay: string, value: string, timeInMiliseconds: number
     return new Promise(async (resolve, reject) => {
         const cacheClass = new RedisDB.RedisDB_Query();
         const cacheConnection = await cacheClass.getConnection();
-       await cacheConnection.setEx(
+        await cacheConnection.setEx(
             kay,
             timeInMiliseconds,
             value
@@ -152,22 +153,32 @@ server.on("request", async (req: IncomingMessage, res) => {
                     // Collect inputted identifier from body
                     const token = body['identifier'];
                     const res_headers = { 'Content-Type': 'application/json', ...headers };
-                    console.log({ body, token })
+                    if (GLOBAL_VARS().IS_DEVELOPMENT) console.log({ body, token })
                     // Validate body
-                    if (typeof token !== 'string') return await EndHttp(res, 400, JSON.stringify({ success: false }, null, 4), res_headers, InsertedDoc.insertedId.toHexString(), url);
-                    // Check if 
-                    const storageKey = `mod_token_${token}`;
-                    const cacheData = JSON.stringify({ storageKey, identifier: token, headers: req.headers }, null, 4);
-                    console.debug(cacheData)
+                    if (typeof token !== 'string') return await EndHttp(res, 400, JSON.stringify({ success: false }, null, 2), res_headers, InsertedDoc.insertedId.toHexString(), url);
+                    // Cache if 
+                    const storageKey = `mod_cache_token_${token}`;
+                    const cacheData = JSON.stringify({ storageKey, identifier: token, headers: req.headers }, null, 2);
+                    if (GLOBAL_VARS().IS_DEVELOPMENT) console.debug(cacheData)
                     const cacher = new RedisDB.RedisDB_Query();
                     const cache = await (await cacher.getConnection()).setEx(
                         storageKey,
                         60000,
                         cacheData
                     )
-                    console.log(cache)
+                    if (GLOBAL_VARS().IS_DEVELOPMENT)  console.log(cache)
 
-                    const res_body = JSON.stringify({ success: true }, null, 4)
+                    //Store in MariaDB
+                    const MariaClass = new MariaDB.MariaDB_Query();
+                    const MariaConnector = await MariaClass.GetConnection();
+                    const ServerTokenHash = createHash('sha512').update(token).digest('base64');
+                    const MariaQuery = await MariaConnector.query(
+                        'INSERT INTO `tokens` (`server.token`, `server.token.hash`, `website.token`, `website.token.hash`) VALUES(?,?,?,?)',
+                        [token, ServerTokenHash, 'UNKNOWN', ServerTokenHash]
+                    )
+                    if (GLOBAL_VARS().IS_DEVELOPMENT)  console.debug({MariaQuery})
+
+                    const res_body = JSON.stringify({ success: true }, null, 2)
                     const res_statusCode = 200;
                     return await EndHttp(res, res_statusCode, res_body, res_headers, InsertedDoc.insertedId.toHexString(), url);
                     break;
@@ -176,8 +187,8 @@ server.on("request", async (req: IncomingMessage, res) => {
                     // Collect inputted identifier from url's query param
                     const searchParams = url.searchParams;
                     const identifier = searchParams.get('identifier');
-                    const res_headers ={ 'Content-Type': 'application/json', ...headers } ;
-                    if (identifier === null) return await EndHttp(res, 400, JSON.stringify({ success: false }, null, 4), res_headers, InsertedDoc.insertedId.toHexString(), url);
+                    const res_headers = { 'Content-Type': 'application/json', ...headers };
+                    if (identifier === null) return await EndHttp(res, 400, JSON.stringify({ success: false }, null, 2), res_headers, InsertedDoc.insertedId.toHexString(), url);
 
                     // NOT DONE
                     // NOT DONE
@@ -185,13 +196,13 @@ server.on("request", async (req: IncomingMessage, res) => {
 
                     //  Return true/false if valid identifier //
 
-                    const res_body = JSON.stringify({ success: true, finished: false }, null, 4)
+                    const res_body = JSON.stringify({ success: true, finished: false }, null, 2)
                     const res_statusCode = 200;
                     return await EndHttp(res, res_statusCode, res_body, res_headers, InsertedDoc.insertedId.toHexString(), url);
                 }
 
                 // Other HTTP Method(s) catcher
-                return await EndHttp(res, 400, JSON.stringify({ success: true }, null, 4), { 'Content-Type': 'application/json', ...headers }, InsertedDoc.insertedId.toHexString(), url);
+                return await EndHttp(res, 400, JSON.stringify({ success: true }, null, 2), { 'Content-Type': 'application/json', ...headers }, InsertedDoc.insertedId.toHexString(), url);
                 break;
             }
             case '/log-in': { // WIP - Not priority
@@ -209,10 +220,10 @@ server.on("request", async (req: IncomingMessage, res) => {
                             const token = jwt.sign({ databaseIdentifier: dbId, expires_at: ExpirationDate.valueOf() }, RSA_PRIVATE_KEY, { algorithm: 'PS256', expiresIn: '24h' });
 
                             // Caching - Storage of session token
-                           const cache = CacheString(dbId, JSON.stringify({ test: true, token, expires_at: ExpirationDate.valueOf() }, null, 4), 129600); //1.5 days
+                            const cache = CacheString(dbId, JSON.stringify({ test: true, token, expires_at: ExpirationDate.valueOf() }, null, 2), 129600); //1.5 days
 
                             // Send data to http client
-                            const http_client_resposne = EndHttp(res, 200, JSON.stringify({ success: true, token, expiration_ms: ExpirationDate.valueOf() }, null, 4), headers, InsertedDoc.insertedId.toHexString(), url);
+                            const http_client_resposne = EndHttp(res, 200, JSON.stringify({ success: true, token, expiration_ms: ExpirationDate.valueOf() }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
 
                             // Finish not-required promise(a)
                             return await Promise.all([
@@ -223,28 +234,145 @@ server.on("request", async (req: IncomingMessage, res) => {
                             // Verify login jwt
                             // Verify login jwt
                             // Verify login jwt
-                            if (typeof req.headers.authorization !== 'string') return await EndHttp(res, 404, JSON.stringify({ success: false }, null, 4), headers, InsertedDoc.insertedId.toHexString(), url);
+                            if (typeof req.headers.authorization !== 'string') return await EndHttp(res, 404, JSON.stringify({ success: false }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
 
                             const verify = jwt.verify(req.headers.authorization, RSA_PUBLIC_KEY, { ignoreExpiration: false, maxAge: '2d' });
-                            console.log(verify)
-                            return await EndHttp(res, 200, JSON.stringify({ success: true, jwt: !!verify }, null, 4), headers, InsertedDoc.insertedId.toHexString(), url);
+                            if (GLOBAL_VARS().IS_DEVELOPMENT) console.log(verify)
+                            return await EndHttp(res, 200, JSON.stringify({ success: true, jwt: !!verify }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
                         } else {
-                            return await EndHttp(res, 404, JSON.stringify({ success: false }, null, 4), headers, InsertedDoc.insertedId.toHexString(), url);
+                            return await EndHttp(res, 404, JSON.stringify({ success: false }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
                         }
                     }
 
                 } catch (err: any) {
                     console.error({ err })
-                    return await EndHttp(res, 500, JSON.stringify({ success: false }, null, 4), headers, InsertedDoc.insertedId.toHexString(), url);
+                    return await EndHttp(res, 500, JSON.stringify({ success: false }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
                 }
 
                 break;
             }
 
+            case '/logs': {
+                if (req.method !== 'GET') return await EndHttp(res, 404, JSON.stringify({ success: false }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
+
+                // Search Params
+                const searchParams = url.searchParams;
+                const token = searchParams.get('token');
+                const value = searchParams.get('value');
+                const format = searchParams.get('format');
+                if (token === null) return await EndHttp(res, 400, JSON.stringify({ success: false, reason: 'Invalid token' }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
+                if (value === null) return await EndHttp(res, 400, JSON.stringify({ success: false, reason: 'Invalid value' }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
+                if (format === null) return await EndHttp(res, 400, JSON.stringify({ success: false, reason: 'Invalid format' }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
+
+                if (GLOBAL_VARS().IS_DEVELOPMENT) console.debug(token, value, format)
+
+
+                // TODO: Validate token w/ function
+
+                // Searching
+                const MariaClass = new MariaDB.MariaDB_Query();
+                const MariaConnector = await MariaClass.GetConnection();
+                const ValueHash = createHash('sha512').update(value).digest('base64');
+
+                        console.debug(value, ValueHash)
+                //Query(s)
+                let MariaFirstQuery: [QueryResult, FieldPacket[]] | null = null;
+                switch (format) {
+                    case 'DYNAMIC.ENHANCED':
+                        return await EndHttp(res, 404, JSON.stringify({ success: false, reason: 'Format not in use' }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
+                        break;
+
+                    case 'WEBSITE.TOKEN':
+                        MariaFirstQuery = await MariaConnector.query(
+                            'SELECT * FROM `tokens` LEFT JOIN `ip` ON `tokens`.`website.token.hash` = `ip`.`website.token.hash` WHERE `tokens`.`website.token.hash`=? LIMIT 1;',
+                            [ValueHash]
+                        )
+                        break;
+
+                    case 'IPV4.PORT':
+                        let ip, port;
+                        const splitter = value.split(':')
+                        ip = splitter[0]
+                        port = splitter[1]
+                        const IPv4Hash = createHash('sha512').update(ip).digest('base64');
+                        const PortHash = createHash('sha512').update(port).digest('base64');
+                        if (GLOBAL_VARS().IS_DEVELOPMENT) console.debug({ IPv4Hash, PortHash })
+                        MariaFirstQuery = await MariaConnector.query(
+                            'SELECT * FROM `ip` RIGHT JOIN `tokens` ON `tokens`.`website.token.hash` = `ip`.`website.token.hash` WHERE `ip`.`ipv4.hash`=? AND `ip`.`port.hash`=? LIMIT 1;',
+                            [IPv4Hash, PortHash]
+                        )
+                        break;
+
+                    case 'IPV4':
+                        MariaFirstQuery = await MariaConnector.query(
+                            'SELECT * FROM `ip` RIGHT JOIN `tokens` ON `tokens`.`website.token.hash` = `ip`.`website.token.hash` WHERE `ip`.`ipv4.hash`=? LIMIT 1;',
+                            [ValueHash]
+                        )
+                        break;
+
+                    case 'IPV6':
+                        MariaFirstQuery = await MariaConnector.query(
+                            'SELECT * FROM `ip` RIGHT JOIN `tokens` ON `tokens`.`website.token.hash` = `ip`.`website.token.hash` WHERE `ip`.`ipv6.hash`=? LIMIT 1;',
+                            [ValueHash]
+                        )
+                        break;
+
+                    case 'SERVER.TOKEN':
+                        MariaFirstQuery = await MariaConnector.query(
+                            'SELECT * FROM `tokens` LEFT JOIN `ip` ON `tokens`.`website.token.hash` = `ip`.`website.token.hash` WHERE `tokens`.`server.token.hash`=? LIMIT 1;',
+                            [ValueHash]
+                        )
+                        break;
+
+                    default:
+                        return await EndHttp(res, 404, JSON.stringify({ success: false, reason: 'Invalid Format' }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
+                        break;
+                }
+
+                // Return variables
+                let results = [{
+                    token: 'token_website_01pqowie92',
+                    server: {
+                        ip: '127.0.0.1',
+                        port: 3306,
+                        token: 'token_server_01pqowie92'
+                    }
+                }]
+                const res_headers = { 'Content-Type': 'application/json', ...headers }
+
+                // Query Validation
+                const [Results]: any[] = MariaFirstQuery
+                if (Results.length > 0) {
+                    // Has results so let get the rest of the data to retutn
+                    let InfoToReturn: any[] = [];
+
+                    Results.forEach(async (result: any) => {
+                        // const website_token_hash = result['website.token.hash']
+                        // const [data_result]: any[] = await MariaConnector.query('SELECT * FROM `tokens` RIGHT JOIN `ip` ON `tokens`.`website.token.hash` = `ip`.`website.token.hash` WHERE `tokens`.`website.token.hash`=? LIMIT 1;', [website_token_hash])
+                        // console.debug({data_result})
+                        if (GLOBAL_VARS().IS_DEVELOPMENT) console.debug({ result })
+
+                        InfoToReturn.push({
+                            token: result['website.token'],
+                            server: {
+                                ip: result['ipv4'],
+                                port: result['port'],
+                                token: result['server.token'],
+                            }
+                        })
+                    });
+                    results = [];
+                    results = InfoToReturn;
+                } else return await EndHttp(res, 200, JSON.stringify({ success: false }, null, 2), res_headers, InsertedDoc.insertedId.toHexString(), url);
+
+                return await EndHttp(res, 200, JSON.stringify({ success: true, results }), res_headers, InsertedDoc.insertedId.toHexString(), url);
+                break;
+            }
+
             default:
-                return await EndHttp(res, 404, JSON.stringify({ success: false }, null, 4), headers, InsertedDoc.insertedId.toHexString(), url);
+
                 break;
         }
-        return await EndHttp(res, 404, JSON.stringify({ success: false }, null, 4), headers, InsertedDoc.insertedId.toHexString(), url);
+        return await EndHttp(res, 404, JSON.stringify({ success: false }, null, 2), headers, InsertedDoc.insertedId.toHexString(), url);
     }
 })
