@@ -3,10 +3,10 @@ import { GLOBAL_VARS } from './environment.js';
 
 // TESTING
 const connection = await mysql.createConnection({
-    host: GLOBAL_VARS()['MariaDB_Host'] || 'localhost',
-    user: GLOBAL_VARS()['MariaDB_Username'] || 'root',
-    password: GLOBAL_VARS()['MariaDB_Password'] || 'root_password',
-    database: GLOBAL_VARS()['MariaDB_Database'] || 'reforger_manager_processed',
+    host: GLOBAL_VARS()['MariaDB_Host'],
+    user: GLOBAL_VARS()['MariaDB_Username'],
+    password: GLOBAL_VARS()['MariaDB_Password'],
+    database: GLOBAL_VARS()['MariaDB_Database'],
     port: Number(GLOBAL_VARS()['MariaDB_Port'])
 });
 try {
@@ -27,13 +27,11 @@ export class MariaDB_Query {
         return new Promise(async (resolve, reject) => {
             try {
                 this.connection = mysql.createPool({
-                    host: GLOBAL_VARS()['MariaDB_Host'] || 'localhost',
-                    user: GLOBAL_VARS()['MariaDB_Username'] || 'root',
-                    password: GLOBAL_VARS()['MariaDB_Password'] || 'root_password',
-                    database: GLOBAL_VARS()['MariaDB_Database'] || 'reforger_manager_processed',
-                    connectionLimit: 20,
-                    enableKeepAlive: false,
-                    idleTimeout:120000,
+                    host: GLOBAL_VARS()['MariaDB_Host'],
+                    user: GLOBAL_VARS()['MariaDB_Username'],
+                    password: GLOBAL_VARS()['MariaDB_Password'],
+                    database: GLOBAL_VARS()['MariaDB_Database'],
+                    connectionLimit: 10,
                     port: Number(GLOBAL_VARS()['MariaDB_Port'])
                 });
             } catch (error) {
