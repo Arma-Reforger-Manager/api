@@ -57,8 +57,11 @@ import { QueryResult, FieldPacket } from 'mysql2';
 
 let server: Server<any> = createServer().listen(81);
 
+let hostname = 'http://localhost';
+if (GLOBAL_VARS().IS_PRODUCTION === true) hostname = 'https://manager.flabby.dev/';
+
 const headers = {
-    'Access-Control-Allow-Origin': GLOBAL_VARS().IS_DEVELOPMENT ? 'https://manager.flabby.dev' : 'http://localhost',
+    'Access-Control-Allow-Origin': hostname,
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': 2592000, // 30 days
 };
