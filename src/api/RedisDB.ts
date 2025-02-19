@@ -2,8 +2,9 @@ import { createClient, RedisClientType } from 'redis';
 
 // TESTING
 import redis from 'redis';
+import { GLOBAL_VARS } from './environment.js';
 const client = redis.createClient({
-	url: `redis://default:password@127.0.0.1:3309`
+	url: `redis://default:password@${GLOBAL_VARS().RedisDB_Host || '127.0.0.1'}:3309`
 })
 await client.connect();
 // const client = await createClient('3309')
@@ -22,7 +23,7 @@ export class RedisDB_Query {
 
 	private async StartConnection() {
 		this.#connection = await createClient({
-			url: `redis://default:password@127.0.0.1:3309`
+			url: `redis://default:password@${GLOBAL_VARS().RedisDB_Host || '127.0.0.1'}:3309`
 		})
 			.on('error', err => console.log('Redis Client Error', err))
 			.connect();
