@@ -7,8 +7,8 @@ export const GLOBAL_VARS = () => {
     if (env['NODE_ENV'].toUpperCase() !== 'PRODUCTION') {
         return {
             NODE_ENV: env['NODE_ENV'],
-            IS_PRODUCTION: true,
-            IS_DEVELOPMENT: false,
+            IS_PRODUCTION: false,
+            IS_DEVELOPMENT: true,
 
             MariaDB_Host: "127.0.0.1",
             MariaDB_Username: "app_user",
@@ -43,8 +43,8 @@ export const GLOBAL_VARS = () => {
 
     return {
         NODE_ENV: env['NODE_ENV'],
-        IS_PRODUCTION: false,
-        IS_DEVELOPMENT: true,
+        IS_PRODUCTION: true,
+        IS_DEVELOPMENT: false,
 
         MariaDB_Host: env['MariaDB_Host'],
         MariaDB_Username: env['MariaDB_Username'],
