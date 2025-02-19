@@ -7,7 +7,7 @@ const connection = await mysql.createConnection({
     user: GLOBAL_VARS()['MariaDB_Username'] || 'root',
     password: GLOBAL_VARS()['MariaDB_Password'] || 'root_password',
     database: GLOBAL_VARS()['MariaDB_Database'] || 'reforger_manager_processed',
-    port: 3308
+    port: Number(GLOBAL_VARS()['MariaDB_Port'])
 });
 try {
     console.log(await connection.query(  'SELECT current_timestamp() as TIME;' ));
@@ -34,7 +34,7 @@ export class MariaDB_Query {
                     connectionLimit: 20,
                     enableKeepAlive: false,
                     idleTimeout:120000,
-                    port: 3308
+                    port: Number(GLOBAL_VARS()['MariaDB_Port'])
                 });
             } catch (error) {
                 console.error({ error })

@@ -2,7 +2,7 @@ import { GLOBAL_VARS } from './environment.js';
 import { Collection, Db, InsertOneResult, MongoClient } from 'mongodb';
 
 // TESTING
-const url = `mongodb://${GLOBAL_VARS().MongoDB_Username}:${GLOBAL_VARS().MongoDB_Password}@${GLOBAL_VARS().MongoDB_Host}:3305`;
+const url = `mongodb://${GLOBAL_VARS().MongoDB_Username}:${GLOBAL_VARS().MongoDB_Password}@${GLOBAL_VARS().MongoDB_Host}:${GLOBAL_VARS().MongoDB_Port}`;
 const client = new MongoClient(url);
 
 async function main() {
@@ -59,7 +59,8 @@ export class MongoDB_Query {
             const Host = GLOBAL_VARS()['MongoDB_Host'];
             const Password = GLOBAL_VARS()['MongoDB_Password'];
             const Username = GLOBAL_VARS()['MongoDB_Username'];
-            this.Client = new MongoClient(`mongodb://${Username}:${Password}@${Host}:3305`);
+            const Port = GLOBAL_VARS()['MongoDB_Port'];
+            this.Client = new MongoClient(`mongodb://${Username}:${Password}@${Host}:${Port}`);
             this.MongoDB = this.Client.db(this.Database);
             this.RequestCollection = this.MongoDB.collection('request');
             this.ResponseCollection = this.MongoDB.collection('response');
