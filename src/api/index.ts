@@ -58,7 +58,7 @@ import { QueryResult, FieldPacket } from 'mysql2';
 let server: Server<any> = createServer().listen(81);
 
 let hostname = 'http://localhost';
-if (GLOBAL_VARS().IS_PRODUCTION === true) hostname = 'https://manager.flabby.dev/';
+if (GLOBAL_VARS().IS_PRODUCTION === true) hostname = 'https://manager.flabby.dev';
 
 const headers = {
     'Access-Control-Allow-Origin': hostname,
